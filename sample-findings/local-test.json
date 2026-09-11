@@ -1,0 +1,24 @@
+{
+  "title": "Suspicious IAM privilege activity",
+  "type": "PrivilegeEscalation:IAMUser/AnomalousBehavior",
+  "description": "An IAM principal performed unusual API activity associated with privilege escalation.",
+  "severity": 8.2,
+  "region": "us-east-1",
+  "resource": {
+    "resourceType": "AccessKey",
+    "accessKeyDetails": {
+      "userType": "IAMUser",
+      "userName": "sample-user"
+    }
+  },
+  "service": {
+    "action": {
+      "actionType": "AWS_API_CALL",
+      "awsApiCallAction": {
+        "api": "AttachUserPolicy",
+        "serviceName": "iam.amazonaws.com"
+      }
+    }
+  }
+}
+
