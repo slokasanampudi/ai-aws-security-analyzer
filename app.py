@@ -7,132 +7,142 @@ OLLAMA_URL = "http://localhost:11434/api/chat"
 MODEL = "llama3.2:3b"
 
 
-def severity_label(score):
-    try:
-        score = float(score)
-
-        if score >= 9.0:
-            return "CRITICAL"
-        elif score >= 7.0:
-            return "HIGH"
-        elif score >= 4.0:
-            return "MEDIUM"
-        else:
-            return "LOW"
-
-    except (TypeError, ValueError):
-        return "UNKNOWN"
-
-
-def map_mitre_tactic(finding_type):
-    mappings = {
-        "CredentialAccess": "Credential Access",
-        "PrivilegeEscalation": "Privilege Escalation",
-        "InitialAccess": "Initial Access",
-        "Persistence": "Persistence",
-        "DefenseEvasion": "Defense Evasion",
-        "Discovery": "Discovery",
-        "Exfiltration": "Exfiltration",
-        "Impact": "Impact",
-        "Recon": "Reconnaissance",
-        "Execution": "Execution",
+def classify_risk(event_name):
+    high_risk = {
+        "CreateAccessKey",
+        "AttachUserPolicy",
+        "PutUserPolicy",
+        "PutRolePolicy",
+        "UpdateAssumeRolePolicy",
+        "CreateLoginProfile"
     }
 
-    category = finding_type.split(":")[0]
+    medium_risk = {
+        "CreateUser",
+        "CreateRole",
+        "CreateServiceLinkedRole",
+        "AddUserToGroup",
+        "ConsoleLogin",
+        "DeleteUser",
+        "DeleteRole"
+    }
 
-    return mappings.get(category, "Requires analyst review")
+    if event_name in high_risk:
+        return "HIGH"
+
+    if event_name in medium_risk:
+        return "MEDIUM"
+
+    return "LOW"
 
 
-def extract_finding(data):
+def mitre_mapping(event_name):
+    mappings = {
+        "ConsoleLogin": "Valid Accounts",
+        "CreateAccessKey": "Account Manipulation",
+        "CreateUser": "Create Account",
+        "CreateRole": "Requires analyst review",
+        "CreateServiceLinkedRole": "Requires analyst review",
+        "AddUserToGroup": "Account Manipulation",
+        "AttachUserPolicy": "Account Manipulation",
+        "PutUserPolicy": "Account Manipulation",
+        "PutRolePolicy": "Account Manipulation",
+        "UpdateAssumeRolePolicy": "Account Manipulation",
+        "CreateLoginProfile": "Account Manipulation"
+    }
 
-    # Supports standard GuardDuty JSON and EventBridge-wrapped GuardDuty data
-    finding = data.get("detail", data)
+    return mappings.get(
+        event_name,
+        "Requires analyst review"
+    )
 
-    finding_type = finding.get("type", "Unknown")
-    severity_score = finding.get("severity", 0)
+def extract_event(data):
+    identity = data.get("userIdentity", {})
 
-    resource = finding.get("resource", {})
-    service = finding.get("service", {})
+    if identity.get("type") == "Root":
+        username = "Root"
+    else:
+        username = (
+            identity.get("userName")
+            or identity.get("principalId")
+            or "Unknown"
+        )
 
     return {
-        "title": finding.get("title", finding_type),
-        "type": finding_type,
-        "description": finding.get(
-            "description",
-            "No description provided."
-        ),
-        "severity_score": severity_score,
-        "severity": severity_label(severity_score),
-        "region": finding.get("region", "Unknown"),
-        "resource_type": resource.get(
-            "resourceType",
-            "Unknown"
-        ),
-        "mitre_tactic": map_mitre_tactic(finding_type),
-        "resource": resource,
-        "action": service.get("action", {}),
+        "event_name": data.get("eventName", "Unknown"),
+        "event_source": data.get("eventSource", "Unknown"),
+        "event_time": data.get("eventTime", "Unknown"),
+        "region": data.get("awsRegion", "Unknown"),
+        "source_ip": data.get("sourceIPAddress", "Unknown"),
+        "user_agent": data.get("userAgent", "Unknown"),
+        "username": username,
+        "identity_type": identity.get("type", "Unknown"),
+        "request_parameters": data.get("requestParameters", {})
     }
 
-
-def analyze_with_ai(finding):
+def analyze_with_ai(event):
+    risk = classify_risk(event["event_name"])
+    mitre = mitre_mapping(event["event_name"])
 
     prompt = f"""
-You are assisting a cybersecurity analyst investigating an
-Amazon AWS GuardDuty finding.
+You are assisting a cloud security analyst.
 
-Analyze ONLY the evidence below.
+Analyze the following AWS CloudTrail event.
 
-Do not invent IP addresses, usernames, resources, actions,
-or other facts that are not supplied.
+Do not invent information that is not provided.
+Do not assume the event is malicious just because it is security relevant.
 
-FINDING TITLE:
-{finding['title']}
+EVENT NAME:
+{event['event_name']}
 
-FINDING TYPE:
-{finding['type']}
+EVENT SOURCE:
+{event['event_source']}
 
-AWS SEVERITY:
-{finding['severity']}
-
-AWS SEVERITY SCORE:
-{finding['severity_score']}
+EVENT TIME:
+{event['event_time']}
 
 AWS REGION:
-{finding['region']}
+{event['region']}
 
-RESOURCE TYPE:
-{finding['resource_type']}
+SOURCE IP:
+{event['source_ip']}
 
-DESCRIPTION:
-{finding['description']}
+USER:
+{event['username']}
 
-MITRE ATT&CK TACTIC:
-{finding['mitre_tactic']}
+IDENTITY TYPE:
+{event['identity_type']}
 
-RESOURCE DATA:
-{json.dumps(finding['resource'], indent=2)}
+USER AGENT:
+{event['user_agent']}
 
-ACTION DATA:
-{json.dumps(finding['action'], indent=2)}
+REQUEST PARAMETERS:
+{json.dumps(event['request_parameters'], indent=2)}
 
-Return these sections:
+RISK CLASSIFICATION:
+{risk}
+
+MITRE ATT&CK MAPPING:
+{mitre}
+
+Return exactly these sections:
 
 INCIDENT SUMMARY
-Give a concise technical explanation of what happened.
+Explain what occurred.
 
-WHY IT MATTERS
-Explain the possible security impact.
+SECURITY SIGNIFICANCE
+Explain why this AWS API activity may matter to a security analyst.
 
 INVESTIGATION STEPS
-Provide 3-5 specific investigation steps for an AWS security analyst.
+Give 3-5 specific investigation steps.
 
 RECOMMENDED RESPONSE
-Provide practical containment or remediation recommendations.
+Give practical security recommendations.
 
 MITRE ATT&CK
-State the supplied MITRE ATT&CK tactic.
-Only suggest a technique if the evidence clearly supports one.
-Otherwise state that technique validation is required.
+Explain the supplied mapping.
+If there is not enough evidence to confirm malicious behavior,
+clearly state that.
 """
 
     response = requests.post(
@@ -152,14 +162,8 @@ Otherwise state that technique validation is required.
 
     response.raise_for_status()
 
-    result = response.json()
+    return response.json()["message"]["content"]
 
-    return result["message"]["content"]
-
-
-# -------------------------
-# STREAMLIT USER INTERFACE
-# -------------------------
 
 st.set_page_config(
     page_title="AI AWS Security Analyzer",
@@ -170,12 +174,12 @@ st.set_page_config(
 st.title("AI AWS Security Analyzer")
 
 st.write(
-    "Analyze Amazon GuardDuty security findings using "
-    "Python and a locally hosted generative AI model."
+    "Analyze AWS CloudTrail events using Python, "
+    "MITRE ATT&CK, and a locally hosted AI model."
 )
 
 uploaded_file = st.file_uploader(
-    "Upload an Amazon GuardDuty JSON finding",
+    "Upload an AWS CloudTrail JSON event",
     type=["json"]
 )
 
@@ -184,49 +188,43 @@ if uploaded_file is not None:
     try:
         data = json.load(uploaded_file)
 
-        finding = extract_finding(data)
+        event = extract_event(data)
 
-        st.subheader("AWS Security Finding")
+        risk = classify_risk(event["event_name"])
+        mitre = mitre_mapping(event["event_name"])
 
-        column1, column2, column3 = st.columns(3)
+        st.subheader("AWS CloudTrail Event")
 
-        column1.metric(
-            "Severity",
-            finding["severity"]
-        )
+        col1, col2, col3 = st.columns(3)
 
-        column2.metric(
-            "AWS Severity Score",
-            finding["severity_score"]
-        )
+        col1.metric("Risk", risk)
+        col2.metric("AWS Region", event["region"])
+        col3.metric("Identity", event["identity_type"])
 
-        column3.metric(
-            "Resource",
-            finding["resource_type"]
-        )
+        st.subheader("Event Name")
+        st.code(event["event_name"])
 
-        st.subheader("Finding Type")
-        st.code(finding["type"])
+        st.subheader("AWS Service")
+        st.write(event["event_source"])
 
-        st.subheader("Description")
-        st.write(finding["description"])
+        st.subheader("User")
+        st.write(event["username"])
 
-        st.subheader("MITRE ATT&CK Tactic")
-        st.write(finding["mitre_tactic"])
+        st.subheader("Source IP")
+        st.write(event["source_ip"])
 
-        st.subheader("AWS Region")
-        st.write(finding["region"])
+        st.subheader("MITRE ATT&CK")
+        st.write(mitre)
 
         if st.button("Analyze with AI"):
 
-            with st.spinner("Analyzing AWS finding..."):
+            with st.spinner("Analyzing CloudTrail event..."):
 
                 try:
-                    analysis = analyze_with_ai(finding)
+                    result = analyze_with_ai(event)
 
                     st.subheader("AI Security Analysis")
-
-                    st.markdown(analysis)
+                    st.markdown(result)
 
                 except requests.RequestException as error:
 
@@ -237,16 +235,14 @@ if uploaded_file is not None:
 
                     st.code(str(error))
 
-        with st.expander("View Raw AWS JSON"):
-
+        with st.expander("View Raw CloudTrail JSON"):
             st.json(data)
 
     except json.JSONDecodeError:
 
-        st.error("The uploaded file is not valid JSON.")
+        st.error("Uploaded file is not valid JSON.")
 
     except Exception as error:
 
-        st.error("The GuardDuty finding could not be processed.")
-
+        st.error("CloudTrail event could not be processed.")
         st.code(str(error))

@@ -1,0 +1,44 @@
+{
+    "eventVersion": "1.11",
+    "userIdentity": {
+        "type": "Root",
+        "principalId": "667500582401",
+        "arn": "arn:aws:iam::667500582401:root",
+        "accountId": "667500582401",
+        "accessKeyId": "ASIAZW2RCSYARD3TJKV3",
+        "sessionContext": {
+            "attributes": {
+                "creationDate": "2026-09-12T19:07:21Z",
+                "mfaAuthenticated": "false"
+            }
+        },
+        "invokedBy": "resource-explorer-2.amazonaws.com"
+    },
+    "eventTime": "2026-09-12T19:13:24Z",
+    "eventSource": "iam.amazonaws.com",
+    "eventName": "CreateServiceLinkedRole",
+    "awsRegion": "us-east-1",
+    "sourceIPAddress": "resource-explorer-2.amazonaws.com",
+    "userAgent": "resource-explorer-2.amazonaws.com",
+    "requestParameters": {
+        "aWSServiceName": "resource-explorer-2.amazonaws.com"
+    },
+    "responseElements": {
+        "role": {
+            "path": "/aws-service-role/resource-explorer-2.amazonaws.com/",
+            "roleName": "AWSServiceRoleForResourceExplorer",
+            "roleId": "AROAZW2RCSYA4X2PCLNGN",
+            "arn": "arn:aws:iam::667500582401:role/aws-service-role/resource-explorer-2.amazonaws.com/AWSServiceRoleForResourceExplorer",
+            "createDate": "2026-09-12T19:13:24Z",
+            "assumeRolePolicyDocument": "%7B%22Version%22%3A%20%222012-10-17%22%2C%20%22Statement%22%3A%20%5B%7B%22Action%22%3A%20%5B%22sts%3AAssumeRole%22%5D%2C%20%22Effect%22%3A%20%22Allow%22%2C%20%22Principal%22%3A%20%7B%22Service%22%3A%20%5B%22resource-explorer-2.amazonaws.com%22%5D%7D%7D%5D%7D"
+        }
+    },
+    "requestID": "16f1a28d-9df1-4cfc-87e9-c5b584395876",
+    "eventID": "6114f1f4-b361-413c-a813-77523e13e30b",
+    "readOnly": false,
+    "eventType": "AwsApiCall",
+    "managementEvent": true,
+    "recipientAccountId": "667500582401",
+    "eventCategory": "Management",
+    "sessionCredentialFromConsole": "true"
+}
