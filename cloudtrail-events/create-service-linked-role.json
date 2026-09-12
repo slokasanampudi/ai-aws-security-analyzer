@@ -2,10 +2,10 @@
     "eventVersion": "1.11",
     "userIdentity": {
         "type": "Root",
-        "principalId": "667500582401",
+        "principalId": "REDACTED",
         "arn": "arn:aws:iam::667500582401:root",
-        "accountId": "667500582401",
-        "accessKeyId": "ASIAZW2RCSYARD3TJKV3",
+        "accountId": "REDACTED",
+        "accessKeyId": "REDACTED",
         "sessionContext": {
             "attributes": {
                 "creationDate": "2026-09-12T19:07:21Z",
@@ -18,7 +18,7 @@
     "eventSource": "iam.amazonaws.com",
     "eventName": "CreateServiceLinkedRole",
     "awsRegion": "us-east-1",
-    "sourceIPAddress": "resource-explorer-2.amazonaws.com",
+    "sourceIPAddress": "REDACTED",
     "userAgent": "resource-explorer-2.amazonaws.com",
     "requestParameters": {
         "aWSServiceName": "resource-explorer-2.amazonaws.com"
