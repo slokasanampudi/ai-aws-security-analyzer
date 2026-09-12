@@ -2,10 +2,6 @@
 
 An AI-assisted cloud security tool that analyzes AWS CloudTrail events, identifies security-relevant IAM and API activity, maps events to MITRE ATT&CK, and generates analyst-ready investigation and remediation guidance.
 
-## Demo
-
-![AI AWS Security Analyzer](screenshots/cloudtrail-ai-analysis.png)
-
 ## Architecture
 
 ```mermaid
